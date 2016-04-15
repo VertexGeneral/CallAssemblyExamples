@@ -1,5 +1,7 @@
 SQL Select Query Demo
 =================
+UPDATE: THIS VERSION OF THE SQL SELECT QUERY DEMO USES THE PROPERTY NAMES INSTEAD OF THE HARD CODED PROPERTY ID FOR "Connection", "SQL", AND "Return"
+SO THAT YOU ARE NOT REQUIRED TO CREATE THE PROPERTIES AS YOUR FIRST 3 PROPERTIES ON A GlobalAction Workflo
 
 The following is a sample application extension that can be used in a GlobalAction "Call Assembly" Workflow node.
 This is a quick and useful way to pull data from a SQL database using a document's index data in a GlobalAction workflow.

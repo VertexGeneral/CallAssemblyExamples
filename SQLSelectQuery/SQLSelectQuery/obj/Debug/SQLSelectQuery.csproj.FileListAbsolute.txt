@@ -1,0 +1,4 @@
+C:\Users\swebb\Sandbox-Bitbucket\Square9App_Debug\SQLSelectQuery.dll
+C:\Users\swebb\Sandbox-Bitbucket\Square9App_Debug\SQLSelectQuery.pdb
+C:\Users\swebb\Documents\GitHub\CallAssemblyExamples\SQLSelectQuery\SQLSelectQuery\obj\Debug\SQLSelectQuery.dll
+C:\Users\swebb\Documents\GitHub\CallAssemblyExamples\SQLSelectQuery\SQLSelectQuery\obj\Debug\SQLSelectQuery.pdb
