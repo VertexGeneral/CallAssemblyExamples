@@ -20,11 +20,17 @@ namespace SQLSelectQuery
             SqlConnection connection = new SqlConnection();
             SqlCommand command = new SqlCommand();
 
-            //Property 1 is used as our SQL Connection String
-            connection.ConnectionString = @Input["1"];  //1 represents the ID of the property that contains the connection string.
+            //Finds the Property ID for the Connection String, SQL Statement, and Return Value properties in GlobalAction
+            string connKey = Input.FirstOrDefault(x => x.Value == "Connection String").Key;
+            string sqlKey = Input.FirstOrDefault(x => x.Value == "SQL Statement").Key;
+            string returnKey = Input.FirstOrDefault(x => x.Value == "Return Value").Key;
 
-            //Property 2 is used as our SQL SELECT Query.
-            String sqlQuery = Input["2"]; //2 represents the ID of the property that contains the SQL Query.
+            //connKey is used as our SQL Connection String
+            connection.ConnectionString = @Input[connKey];  //conKey represents the ID of the property that contains the connection string.
+
+            //sqlKey is used as our SQL Statement.
+            String sqlQuery = Input[sqlKey]; //sqlKey represents the ID of the property that contains the SQL Query.
+
             sqlQuery = sqlQuery.Replace("#ARCHIVEID#", Input["ARCHIVEID"]);
             sqlQuery = sqlQuery.Replace("#DOCID#", Input["DOCUMENTID"]);
             sqlQuery = sqlQuery.Replace("#DATABASEID#", Input["DATABASEID"]);
@@ -44,8 +50,13 @@ namespace SQLSelectQuery
                     {
                         if (reader[0] != null)
                         {
-                            //The result that is returned from the SQL query is added to our return Dictionary object as Property 3's Value.
-                            Output.Add("3", reader[0].ToString()); //3 represents the ID of the property that contains the return value.
+                            //The result that is returned from the SQL query is added to our return Dictionary object as our Return Value.
+                            Output.Add(returnKey, reader[0].ToString()); //returnKey represents the ID of the property that contains the return value.
+                        }
+                        else
+                        {
+                            //Return "No data" if the return is empty. This allows EXEC statements to be passed through the assembly to execute stored procedures.
+                            Output.Add(returnKey, "No data");
                         }
                     }
                 }
