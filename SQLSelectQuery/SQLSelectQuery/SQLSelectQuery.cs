@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Data.Sql;
 using System.Data.SqlClient;
 using System.IO;
+using System.Xml.Linq;
 
 namespace SQLSelectQuery
 {
@@ -21,28 +22,61 @@ namespace SQLSelectQuery
 
             try
             {
-                //property names and their ids are stored in an xml file. the name is the element, the id has to match the dictionary key.
+                //Property names and their ids are stored in an xml file. the name is the element, the id has to match the dictionary key.
                 String mappingfile = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetCallingAssembly().Location), "PropertyMapping.xml");
 
                 if (File.Exists(mappingfile))
                 {
-                    //we create an object to deserialize the xml to. 
-                    PropertyMapping propertyMap = new PropertyMapping();
-                    propertyMap = propertyMap.Deserialize(mappingfile);
+
 
                     //Now, for each Workflow Property Value that we have in our Input, perform some sort of processing with that data.
                     //In this example, we are taking a SQL Connection string and a SQL query, then running the SQL query to get a value.
                     SqlConnection connection = new SqlConnection();
                     SqlCommand command = new SqlCommand();
 
-                    //the dictionary's key value for the connectionstring
-                    connection.ConnectionString = @Input[propertyMap.ConnectionString];  //1 represents the ID of the property that contains the connection string.
+                    //Declare an IEnumerable object to hold the WorkflowID found in our Input dictionary (must be set in the workflow as a process field)
+                    IEnumerable<String> WorkflowID;
 
-                    //the dictionary's key value for the SQL SELECT Query.
-                    String sqlQuery = Input[propertyMap.SqlStatement];
-                    //these values are populated by the Call Assembly workflow node
+                    /* Use Linq to find the value for WorkflowID from the Input Dictionary (note: the property in your workflow
+                    must be set to "WorkflowID=<MyID>" without quotes) */
 
-                    //Allows this call assembly to work with GlobalCapture in addition to GlobalAction (GC does not pass these keys in the dict object)
+                    WorkflowID = (from iv in Input
+                                 where iv.Value.Contains(@"WorkflowID=")
+                                 select iv.Value.Replace("WorkflowID=","")).ToList();
+
+                    
+                    //Declare IEnumerables to hold the IDs for the Connection String, SQL Statement, and Return Value found in the PropertyMapping.xml file
+                    IEnumerable<String> ConnectionID = Enumerable.Empty<string>();
+                    IEnumerable<String> StatementID = Enumerable.Empty<string>();
+                    IEnumerable<String> ReturnID = Enumerable.Empty<string>();
+                    
+                    //Query PropertyMapping.xml for the relevant Workflow Field IDs
+                    if (WorkflowID != null)
+                    {
+
+                        ConnectionID = (from values in XDocument.Load(mappingfile)
+                                                    .Descendants("PropertyMap")
+                                        where values.Element("WorkflowID").Value.Equals(WorkflowID.FirstOrDefault())
+                                        select (String)values.Element("ConnectionString")).ToList();
+                        StatementID = (from values in XDocument.Load(mappingfile)
+                                                    .Descendants("PropertyMap")
+                                        where values.Element("WorkflowID").Value.Equals(WorkflowID.FirstOrDefault())
+                                        select (String)values.Element("SqlStatement")).ToList();
+                        ReturnID = (from values in XDocument.Load(mappingfile)
+                                                    .Descendants("PropertyMap")
+                                        where values.Element("WorkflowID").Value.Equals(WorkflowID.FirstOrDefault())
+                                        select (String)values.Element("ReturnValue")).ToList();
+                                                
+                    }
+
+                    //The dictionary's key value for the connectionstring
+                    connection.ConnectionString = @Input[ConnectionID.FirstOrDefault()];
+
+                    //The dictionary's key value for the SQL SELECT Query.
+                    String sqlQuery = Input[StatementID.FirstOrDefault()];
+
+                    //These values are populated by the Call Assembly workflow node, but only in GlobalAction
+                    //If statements allow this call assembly to work with GlobalCapture in addition to GlobalAction (GC does not pass these keys in the Input dictionary)
                     if (Input.ContainsKey("ARCHIVEID"))
                     {
                         sqlQuery = sqlQuery.Replace("#ARCHIVEID#", Input["ARCHIVEID"]);
@@ -56,8 +90,10 @@ namespace SQLSelectQuery
                         sqlQuery = sqlQuery.Replace("#DATABASEID#", Input["DATABASEID"]);
                     }
 
+                    //Set the SQL command statement
                     command.CommandText = sqlQuery;
 
+                    //Try to run the query on the given database connection
                     if (connection.ConnectionString != String.Empty && command.CommandText != String.Empty)
                     {
                         connection.Open();
@@ -69,11 +105,11 @@ namespace SQLSelectQuery
                                 if (reader[0] != null)
                                 {
                                     //The result that is returned from the SQL query is added to our return Dictionary object as Property id and Value.
-                                    Output.Add(propertyMap.ReturnValue, reader[0].ToString());
+                                    Output.Add(ReturnID.FirstOrDefault(), reader[0].ToString());
                                 }
                                 else
                                 {
-                                    Output.Add(propertyMap.ReturnValue, "No Data");
+                                    Output.Add(ReturnID.FirstOrDefault(), "No Data");
                                 }
                             }
                         }
@@ -111,36 +147,4 @@ namespace SQLSelectQuery
         }
     }
 
-    /// <summary>
-    /// create an object that will match the xml file
-    /// </summary>
-    public class PropertyMapping
-    {
-        public String ConnectionString { get; set; }
-        public String SqlStatement { get; set; }
-        public String ReturnValue { get; set; }
-
-        public void Serialize(String file, PropertyMapping propertyMap)
-        {
-            System.Xml.Serialization.XmlSerializer xs
-               = new System.Xml.Serialization.XmlSerializer(propertyMap.GetType());
-            StreamWriter writer = File.CreateText(file);
-            xs.Serialize(writer, propertyMap);
-            writer.Flush();
-            writer.Close();
-            writer.Dispose();
-        }
-
-        public PropertyMapping Deserialize(string file)
-        {
-            System.Xml.Serialization.XmlSerializer xs
-               = new System.Xml.Serialization.XmlSerializer(
-                  typeof(PropertyMapping));
-            StreamReader reader = File.OpenText(file);
-            PropertyMapping propertyMap = (PropertyMapping)xs.Deserialize(reader);
-            reader.Close();
-            reader.Dispose();
-            return propertyMap;
-        }
-    }
 }
