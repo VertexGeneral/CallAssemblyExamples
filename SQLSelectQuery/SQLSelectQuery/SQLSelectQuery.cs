@@ -53,7 +53,7 @@ namespace SQLSelectQuery
                     //Query PropertyMapping.xml for the relevant Workflow's Field IDs
                     if (workflowID != "")
                     {
-                        PropertyMap workflowProperties = propertyMap.Workflows.Where(x => x.WorkflowID == workflowID).FirstOrDefault();
+                        PropertyMap workflowProperties = propertyMap.Workflows.Where(x => x.WorkflowID.ToLower() == workflowID.ToLower()).FirstOrDefault();
                         
                         if (workflowProperties != null)
                         {
